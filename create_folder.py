@@ -5,24 +5,27 @@ from random import shuffle
 PATH = './data/ISIC2018_Task1_npy_all/image'
 SAVE_PATH = './Datasets'
 
+FOLDER_SIZE = 20
+SPLIT_SIZE = FOLDER_SIZE // 2 # size of the validation or training chunk, validation is half the folder size
 
-def create_5_floder(folder, save_foler):
+def create_5_folder(folder, save_foler):
     file_list = os.listdir(folder)
     shuffle(file_list)
 
     for i in range(5):
-        if i != 0:
-            pre_test_list = file_list[0:i*518]
+        if i != 0: # folders 1-4
+            pre_test_list = file_list[0:i*FOLDER_SIZE]
         else:
             pre_test_list = []
-        test_list = file_list[i*518:(i+1)*518]
+        test_list = file_list[i*FOLDER_SIZE:(i+1)*FOLDER_SIZE]
 
         if i < 4:
-            valid_list = file_list[(i+1)*518:(i+1)*518+260]
-            train_list = file_list[(i+1)*518+260:] + pre_test_list
+            start_ix = (i+1)*FOLDER_SIZE
+            valid_list = file_list[start_ix: start_ix + SPLIT_SIZE]
+            train_list = file_list[start_ix + SPLIT_SIZE:] + pre_test_list
         else:
-            valid_list = file_list[-4:] + file_list[:256]
-            train_list = file_list[256:i*518]
+            valid_list = file_list[:SPLIT_SIZE]
+            train_list = file_list[SPLIT_SIZE:i*FOLDER_SIZE]
 
         if not os.path.isdir(save_foler + '/folder'+str(i+1)):
             os.makedirs(save_foler + '/folder'+str(i+1))
@@ -43,4 +46,4 @@ def text_save(filename, data):      # filename: path to write CSV, data: data li
 
 
 if __name__ == "__main__":
-    create_5_floder(PATH, SAVE_PATH)
+    create_5_folder(PATH, SAVE_PATH)
