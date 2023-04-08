@@ -2,15 +2,15 @@ import os
 import numpy
 from random import shuffle
 
-PATH = './data/ISIC2018_Task1_npy_all/image'
+PATH = '../ISIC2018/ISIC2018_Task1-2_Training_Input'
 SAVE_PATH = './Datasets'
-
-FOLDER_SIZE = 20
-SPLIT_SIZE = FOLDER_SIZE // 2 # size of the validation or training chunk, validation is half the folder size
-
 def create_5_folder(folder, save_foler):
     file_list = os.listdir(folder)
     shuffle(file_list)
+
+    FOLDER_SIZE = len(file_list) // 5
+    SPLIT_SIZE = FOLDER_SIZE // 2 # size of the validation or training chunk, validation is half the folder size
+
 
     for i in range(5):
         if i != 0: # folders 1-4
