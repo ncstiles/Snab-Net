@@ -281,6 +281,7 @@ def main(args):
 
     # loading the dataset
     print('loading the {0},{1},{2} dataset ...'.format('train', 'validation', 'test'))
+    print("test transform:", Test_Dataset)
     trainset = Test_Dataset[args.data](dataset_folder=args.root_path, folder=args.val_folder, train_type='train',
                                        transform=Test_Transform[args.data])
     validset = Test_Dataset[args.data](dataset_folder=args.root_path, folder=args.val_folder, train_type='validation',
@@ -468,3 +469,4 @@ if __name__ == '__main__':
         args.resume = args.ckpt + '/' + str(args.start_epoch) + '_' + args.data + '_checkpoint.pth.tar'
 
     main(args)
+

@@ -2,3 +2,6 @@ cv_project/
 **/__pycache__/
 ISIC_2018/
 .DS_Store
+data/ISIC2018_Task1_npy_all*
+*.err
+*.out

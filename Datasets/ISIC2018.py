@@ -52,3 +52,4 @@ class ISIC2018_dataset(Dataset):
         return len(self.folder)
 
 # a = ISIC2018_dataset()
+
