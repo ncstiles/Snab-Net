@@ -1,5 +1,9 @@
+import numpy as np
+from PIL import Image
 import torch
 import torch.nn as nn
+from torchvision.utils import save_image
+from scipy import ndimage
 
 from Models.layers.modules import conv_block, UpCat, UpCatconv, UnetDsv3, UnetGridGatingSignal3
 from Models.layers.grid_attention_layer import GridAttentionBlock2D, MultiAttentionBlock
@@ -19,6 +23,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.is_batchnorm = is_batchnorm
         self.feature_scale = feature_scale
         self.out_size = args.out_size
+        self.counter = 0
 
         filters = [64, 128, 256, 512, 1024]
         filters = [int(x / self.feature_scale) for x in filters]
@@ -39,8 +44,8 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.center = conv_block(filters[3], filters[4], drop_out=True)
 
         # attention blocks
-        # self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[1],
-        #                                             inter_channels=filters[0])
+        self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[1],
+                                                    inter_channels=filters[0])
         self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[2], inter_size=filters[1],
                                                    nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
         self.attentionblock3 = MultiAttentionBlock(in_size=filters[2], gate_size=filters[3], inter_size=filters[2],
@@ -69,6 +74,9 @@ class Comprehensive_Atten_Unet(nn.Module):
 
     def forward(self, inputs):
         # Feature Extraction
+        img = inputs[0]
+        save_image(img, f'./result/original_img_{self.counter}.jpg')
+        
         conv1 = self.conv1(inputs)
         maxpool1 = self.maxpool1(conv1)
 
@@ -100,17 +108,23 @@ class Comprehensive_Atten_Unet(nn.Module):
         up3, att_weight3 = self.up3(up3)
         g_conv2, att2 = self.attentionblock2(conv2, up3)
 
-        # atten2_map = att2.cpu().detach().numpy().astype(np.float)
+        # atten2_map = att2.cpu().detach().numpy().astype(float)
         # atten2_map = ndimage.interpolation.zoom(atten2_map, [1.0, 1.0, 224 / atten2_map.shape[2],
-        #                                                      300 / atten2_map.shape[3]], order=0)
+        #                                                       300 / atten2_map.shape[3]], order=0)
 
         up2 = self.up_concat2(g_conv2, up3)
         up2, att_weight2 = self.up2(up2)
-        # g_conv1, att1 = self.attentionblock1(conv1, up2)
+        g_conv1, att1 = self.attentionblock1(conv1, up2)
 
-        # atten1_map = att1.cpu().detach().numpy().astype(np.float)
-        # atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, 224 / atten1_map.shape[2],
-        #                                                      300 / atten1_map.shape[3]], order=0)
+        atten1_map = att1.cpu().detach().numpy().astype(float)
+        atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, 224 / atten1_map.shape[2],
+                                                             300 / atten1_map.shape[3]], order=0)
+        
+        atten1_map_to_save = atten1_map[0, 0, :, :].reshape(224, 300)
+        rescaled = (255.0 / (atten1_map_to_save.max() - atten1_map_to_save.min()) * (atten1_map_to_save - atten1_map_to_save.min())).astype(np.uint8)
+        img = Image.fromarray(rescaled).convert('RGB')
+        img.save(f'./result/attention_map_{self.counter}.jpg')
+        
         up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
 
@@ -123,5 +137,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         out = self.scale_att(dsv_cat)
 
         out = self.final(out)
+        
+        self.counter += 1
 
         return out
