@@ -33,12 +33,14 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2))
 
         self.conv2 = conv_block(filters[0], filters[1])
-        self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2))
+        # self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.maxpool2 = nn.MaxPool2d(kernel_size=(4, 4))
 
-        self.conv3 = conv_block(filters[1], filters[2])
-        self.maxpool3 = nn.MaxPool2d(kernel_size=(2, 2))
+        # self.conv3 = conv_block(filters[1], filters[2])
+        # self.maxpool3 = nn.MaxPool2d(kernel_size=(2, 2))
 
-        self.conv4 = conv_block(filters[2], filters[3], drop_out=True)
+        # self.conv4 = conv_block(filters[2], filters[3], drop_out=True)
+        self.conv4 = conv_block(filters[1], filters[3], drop_out=True)
         self.maxpool4 = nn.MaxPool2d(kernel_size=(2, 2))
 
         self.center = conv_block(filters[3], filters[4], drop_out=True)
@@ -46,7 +48,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         # attention blocks
         self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[1],
                                                     inter_channels=filters[0])
-        self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[2], inter_size=filters[1],
+        self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[3], inter_size=filters[1],
                                                    nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
         self.attentionblock3 = MultiAttentionBlock(in_size=filters[2], gate_size=filters[3], inter_size=filters[2],
                                                    nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
@@ -55,10 +57,10 @@ class Comprehensive_Atten_Unet(nn.Module):
         # upsampling
         self.up_concat4 = UpCat(filters[4], filters[3], self.is_deconv)
         self.up_concat3 = UpCat(filters[3], filters[2], self.is_deconv)
-        self.up_concat2 = UpCat(filters[2], filters[1], self.is_deconv)
+        self.up_concat2 = UpCat(filters[3], filters[1], self.is_deconv)
         self.up_concat1 = UpCat(filters[1], filters[0], self.is_deconv)
         self.up4 = SE_Conv_Block(filters[4], filters[3], drop_out=True)
-        self.up3 = SE_Conv_Block(filters[3], filters[2])
+        # self.up3 = SE_Conv_Block(filters[3], filters[2])
         self.up2 = SE_Conv_Block(filters[2], filters[1])
         self.up1 = SE_Conv_Block(filters[1], filters[0])
 
@@ -68,7 +70,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.dsv2 = UnetDsv3(in_size=filters[1], out_size=4, scale_factor=self.out_size)
         self.dsv1 = nn.Conv2d(in_channels=filters[0], out_channels=4, kernel_size=1)
 
-        self.scale_att = scale_atten_convblock(in_size=16, out_size=4)
+        self.scale_att = scale_atten_convblock(in_size=12, out_size=4)
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
 
@@ -83,10 +85,10 @@ class Comprehensive_Atten_Unet(nn.Module):
         conv2 = self.conv2(maxpool1)
         maxpool2 = self.maxpool2(conv2)
 
-        conv3 = self.conv3(maxpool2)
-        maxpool3 = self.maxpool3(conv3)
+        # conv3 = self.conv3(maxpool2)
+        # maxpool3 = self.maxpool3(conv3)
 
-        conv4 = self.conv4(maxpool3)
+        conv4 = self.conv4(maxpool2)
         maxpool4 = self.maxpool4(conv4)
 
         # Gating Signal Generation
@@ -98,21 +100,21 @@ class Comprehensive_Atten_Unet(nn.Module):
         g_conv4 = self.nonlocal4_2(up4)
 
         up4, att_weight4 = self.up4(g_conv4)
-        g_conv3, att3 = self.attentionblock3(conv3, up4)
+        # print("up4 before attention:", up4)
+        # g_conv3, att3 = self.attentionblock3(conv3, up4)
 
-        # atten3_map = att3.cpu().detach().numpy().astype(np.float)
-        # atten3_map = ndimage.interpolation.zoom(atten3_map, [1.0, 1.0, 224 / atten3_map.shape[2],
-        #                                                      300 / atten3_map.shape[3]], order=0)
+        # up3 = self.up_concat3(g_conv3, up4)
+        # up3, att_weight3 = self.up3(up3)
+        g_conv2, att2 = self.attentionblock2(conv2, up4)
 
-        up3 = self.up_concat3(g_conv3, up4)
-        up3, att_weight3 = self.up3(up3)
-        g_conv2, att2 = self.attentionblock2(conv2, up3)
+        # print("gconv2:", g_conv2.shape)
+        # print("up4:", up4.shape)
 
-        # atten2_map = att2.cpu().detach().numpy().astype(float)
-        # atten2_map = ndimage.interpolation.zoom(atten2_map, [1.0, 1.0, 224 / atten2_map.shape[2],
-        #                                                       300 / atten2_map.shape[3]], order=0)
+        upsample_layer = nn.Upsample(scale_factor=2, mode = 'bilinear')
+        up4 = upsample_layer(up4)
+        # print("up4:", up4.shape)
 
-        up2 = self.up_concat2(g_conv2, up3)
+        up2 = self.up_concat2(g_conv2, up4)
         up2, att_weight2 = self.up2(up2)
         g_conv1, att1 = self.attentionblock1(conv1, up2)
 
@@ -130,10 +132,12 @@ class Comprehensive_Atten_Unet(nn.Module):
 
         # Deep Supervision
         dsv4 = self.dsv4(up4)
-        dsv3 = self.dsv3(up3)
+        # dsv3 = self.dsv3(up3)
         dsv2 = self.dsv2(up2)
         dsv1 = self.dsv1(up1)
-        dsv_cat = torch.cat([dsv1, dsv2, dsv3, dsv4], dim=1)
+        # dsv_cat = torch.cat([dsv1, dsv2, dsv3, dsv4], dim=1)
+        dsv_cat = torch.cat([dsv1, dsv2, dsv4], dim=1)
+
         out = self.scale_att(dsv_cat)
 
         out = self.final(out)
