@@ -33,38 +33,30 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.conv1 = conv_block(self.in_channels, filters[0])
         self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2))
 
-        self.conv2 = conv_block(filters[0], filters[1])
-        self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.conv2 = conv_block(filters[0], filters[1], drop_out=True)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=(8, 8))
 
-        self.conv3 = conv_block(filters[1], filters[2], drop_out=True)
-        self.maxpool3 = nn.MaxPool2d(kernel_size=(4, 4))
-
-        self.center = conv_block(filters[2], filters[4], drop_out=True)
+        self.center = conv_block(filters[1], filters[4], drop_out=True)
 
         # attention blocks
         self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[1],
                                                     inter_channels=filters[0])
-        self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[2], inter_size=filters[1],
+        self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[4], inter_size=filters[1],
                                                    nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
-        self.attentionblock3 = MultiAttentionBlock(in_size=filters[2], gate_size=filters[4], inter_size=filters[2],
-                                                   nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
-        self.nonlocal4_2 = NONLocalBlock2D(in_channels=filters[4], inter_channels=filters[4] // 4)
+        
 
         # upsampling
-        self.up_concat3 = UpCat(filters[4], filters[2], self.is_deconv)
-        self.up_concat2 = UpCat(filters[2], filters[1], self.is_deconv)
+        self.up_concat2 = UpCat(filters[4], filters[1], self.is_deconv)
         self.up_concat1 = UpCat(filters[1], filters[0], self.is_deconv)
 
-        self.up3 = SE_Conv_Block(filters[3], filters[2])
         self.up2 = SE_Conv_Block(filters[2], filters[1])
         self.up1 = SE_Conv_Block(filters[1], filters[0])
 
         # deep supervision
-        self.dsv3 = UnetDsv3(in_size=filters[2], out_size=4, scale_factor=self.out_size)
         self.dsv2 = UnetDsv3(in_size=filters[1], out_size=4, scale_factor=self.out_size)
         self.dsv1 = nn.Conv2d(in_channels=filters[0], out_channels=4, kernel_size=1)
 
-        self.scale_att = scale_atten_convblock(in_size=12, out_size=4)
+        self.scale_att = scale_atten_convblock(in_size=8, out_size=4)
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
 
@@ -79,24 +71,17 @@ class Comprehensive_Atten_Unet(nn.Module):
         conv2 = self.conv2(maxpool1)
         maxpool2 = self.maxpool2(conv2)
 
-        conv3 = self.conv3(maxpool2)
-        maxpool3 = self.maxpool3(conv3)
-
         # Gating Signal Generation
-        center = self.center(maxpool3)
+        center = self.center(maxpool2)
 
         # Attention Mechanism
         # Upscaling Part (Decoder)
 
-        upsample = nn.Upsample(scale_factor=2, mode="bilinear")
+        g_conv2, att2 = self.attentionblock2(conv2, center)
+
+        upsample = nn.Upsample(scale_factor=4, mode="bilinear")
         up_center = upsample(center)
-        g_conv3, att3 = self.attentionblock3(conv3, center)
-
-        up3 = self.up_concat3(g_conv3, up_center)
-        up3, att_weight3 = self.up3(up3)
-        g_conv2, att2 = self.attentionblock2(conv2, up3)
-
-        up2 = self.up_concat2(g_conv2, up3)
+        up2 = self.up_concat2(g_conv2, up_center)
         up2, att_weight2 = self.up2(up2)
         g_conv1, att1 = self.attentionblock1(conv1, up2)
 
@@ -113,11 +98,10 @@ class Comprehensive_Atten_Unet(nn.Module):
         up1, att_weight1 = self.up1(up1)
 
         # Deep Supervision
-        dsv3 = self.dsv3(up3)
         dsv2 = self.dsv2(up2)
         dsv1 = self.dsv1(up1)
         
-        dsv_cat = torch.cat([dsv1, dsv2, dsv3], dim=1)
+        dsv_cat = torch.cat([dsv1, dsv2], dim=1)
 
         out = self.scale_att(dsv_cat)
 
