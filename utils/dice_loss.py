@@ -1,6 +1,10 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 import torch
 import torch.nn.functional as F
 from torch.nn.modules.loss import _Loss
+
 
 
 class SoftDiceLoss(_Loss):
@@ -87,7 +91,7 @@ def Intersection_over_Union_fetus(prediction, soft_ground_truth, num_class):
     return placenta_iou, brain_iou
 
 
-def val_dice_isic(prediction, soft_ground_truth, num_class):
+def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
     # predict = prediction.permute(0, 2, 3, 1)
     pred = prediction.contiguous().view(-1, num_class)
     # pred = F.softmax(pred, dim=1)
@@ -97,6 +101,32 @@ def val_dice_isic(prediction, soft_ground_truth, num_class):
     seg_vol = torch.sum(pred, 0)
     dice_score = 2.0 * intersect / (ref_vol + seg_vol + 1.0)
     dice_mean_score = torch.mean(dice_score)
+    
+    if mode == "test":
+        for i in range(10):
+            OUTPUT_SIZE = 224*300
+            ground_to_show_1 = ground[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
+            ground_to_show_2 = ground[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
+            pred_to_show_1 = pred[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
+            pred_to_show_2 = pred[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
+
+            sns.set()
+            
+            plot1 = sns.heatmap(ground_to_show_1)
+            plot1.figure.savefig("vis/image_" + str(i) + "_ground1.jpg")
+            plt.clf()
+            
+            plot2 = sns.heatmap(ground_to_show_2)
+            plot2.figure.savefig("vis/image_" + str(i) + "_ground2.jpg")
+            plt.clf()
+            
+            plot3 = sns.heatmap(pred_to_show_1)
+            plot3.figure.savefig("vis/image_" + str(i) + "_pred1.jpg")
+            plt.clf()
+            
+            plot4 = sns.heatmap(pred_to_show_2)
+            plot4.figure.savefig("vis/image_" + str(i) + "_pred2.jpg")
+            plt.clf()
 
     return dice_mean_score
 

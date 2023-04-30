@@ -249,7 +249,7 @@ def test_isic(test_loader, model, args):
         label_arr = np.squeeze(target_soft.cpu().numpy()).astype(np.uint8)
         output_arr = np.squeeze(output_soft.cpu().byte().numpy()).astype(np.uint8)
 
-        isic_b_dice = val_dice_isic(output_soft, target_soft, args.num_classes)                # the dice accuracy
+        isic_b_dice = val_dice_isic(output_soft, target_soft, args.num_classes, mode="test")                # the dice accuracy
         isic_b_iou = Intersection_over_Union_isic(output_soft, target_soft, args.num_classes)  # the iou accuracy
         isic_b_asd = assd(output_arr[:, :, :, 1], label_arr[:, :, :, 1])                       # the assd
 
