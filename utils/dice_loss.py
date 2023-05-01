@@ -105,6 +105,8 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
     if mode == "test":
         for i in range(10):
             OUTPUT_SIZE = 224*300
+            ground = ground.cpu().detach().numpy().astype(int)
+            pred = pred.cpu().detach().numpy().astype(int)
             ground_to_show_1 = ground[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
             ground_to_show_2 = ground[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
             pred_to_show_1 = pred[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
