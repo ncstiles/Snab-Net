@@ -146,7 +146,7 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
             
             zeros = np.zeros(ground_to_show_2.shape)
             ground2show = np.dstack((zeros, ground_to_show_2, zeros))
-            pred2show = np.dstack((zeros, zeros, zeros))
+            pred2show = np.dstack((zeros, zeros, pred_to_show_2))
             im = image2show[i, :, :, :]
             final = 0.2*ground2show + 0.2*pred2show + 0.6*im
             plot5 = plt.imshow(final)
