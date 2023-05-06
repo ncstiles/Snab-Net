@@ -92,6 +92,57 @@ def Intersection_over_Union_fetus(prediction, soft_ground_truth, num_class):
 
 
 def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=None):
+    
+    def is_in_bounds(point, rows, cols):
+        p1, p2 = point
+        if p1 < 0 or p1 >= rows:
+            return False
+        elif p2 < 0 or p2 >= cols:
+            return False
+        return True
+    
+    def detect_edges(image):
+        rows = int(image.shape[0])
+        cols = int(image.shape[1])
+        edges = np.zeros(image.shape)
+        edges_adj = np.zeros(image.shape)
+        
+        for r in range(rows):
+            for c in range(cols):
+                neighbors = [(r+1, c), (r-1, c), (r, c+1), (r, c-1)]
+                
+                if image[r, c] == 0:
+                    continue
+                
+                for neighbor in neighbors:
+                    nr, nc = neighbor
+                    if not is_in_bounds(neighbor, rows, cols):
+                        continue
+                    
+                    neighbor_val = image[nr, nc]
+                    if neighbor_val == 0:
+                        edges[r, c] = 1
+                
+                if edges[r, c] == 1:
+                    edges_adj[r, c] = 1
+                    for neighbor in neighbors:
+                        if is_in_bounds(neighbor, rows, cols):
+                            edges_adj[neighbor[0], neighbor[1]] = 1
+                
+        return edges_adj
+    
+    def draw_edge(image, mask, channel):
+        for c in range(3):
+            color_channel = image[:, :, c]
+            if c == channel:
+                color_channel[mask == 1] = 1
+            else:
+                color_channel[mask == 1] = 0
+            image[:, :, c] = color_channel
+        
+        return image
+    
+                    
     # predict = prediction.permute(0, 2, 3, 1)
     pred = prediction.contiguous().view(-1, num_class)
     # pred = F.softmax(pred, dim=1)
@@ -110,10 +161,10 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
         
         for i in range(10):
             OUTPUT_SIZE = 224*300
-            ground_to_show_1 = ground_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
-            ground_to_show_2 = ground_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
-            pred_to_show_1 = pred_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300)
-            pred_to_show_2 = pred_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
+            ground_to_show_1 = detect_edges(ground_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300))
+            ground_to_show_2 = detect_edges(ground_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300))
+            pred_to_show_1 = detect_edges(pred_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 0].reshape(224, 300))
+            pred_to_show_2 = detect_edges(pred_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300))
 
             sns.set()
             sns.set_style("whitegrid", {'axes.grid' : False})
@@ -144,12 +195,12 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
             plot4.figure.savefig("vis/image_" + str(i) + "_pred2.jpg")
             plt.clf()
             
-            zeros = np.zeros(ground_to_show_2.shape)
-            ground2show = np.dstack((zeros, ground_to_show_2, zeros))
-            pred2show = np.dstack((zeros, zeros, pred_to_show_2))
-            im = image2show[i, :, :, :]
-            final = 0.2*ground2show + 0.2*pred2show + 0.6*im
-            plot5 = plt.imshow(final)
+            ground2show = ground_to_show_2
+            pred2show = pred_to_show_2
+            im = image2show.numpy()[i, :, :, :]
+            final1 = draw_edge(im, ground2show, 1)
+            final2 = draw_edge(final1, pred2show, 2)
+            plot5 = plt.imshow(final2)
             plot5.figure.savefig("vis/image_" + str(i) + "_combined.jpg")
             plt.clf()
 
