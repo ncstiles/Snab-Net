@@ -197,7 +197,7 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
             
             ground2show = ground_to_show_2
             pred2show = pred_to_show_2
-            im = image2show.numpy()[i, :, :, :]
+            im = image2show[i, :, :, :]
             final1 = draw_edge(im, ground2show, 1)
             final2 = draw_edge(final1, pred2show, 2)
             plot5 = plt.imshow(final2)
