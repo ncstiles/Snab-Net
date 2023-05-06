@@ -91,7 +91,7 @@ def Intersection_over_Union_fetus(prediction, soft_ground_truth, num_class):
     return placenta_iou, brain_iou
 
 
-def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
+def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=None):
     # predict = prediction.permute(0, 2, 3, 1)
     pred = prediction.contiguous().view(-1, num_class)
     # pred = F.softmax(pred, dim=1)
@@ -105,6 +105,8 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
     if mode == "test":
         ground_np = ground.cpu().detach().numpy().astype(int)
         pred_np = pred.cpu().detach().numpy().astype(int)
+        image_np = image.cpu().detach().numpy()
+        image2show = np.transpose(image_np, (0, 2, 3, 1))
         
         for i in range(10):
             OUTPUT_SIZE = 224*300
@@ -114,6 +116,17 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
             pred_to_show_2 = pred_np[OUTPUT_SIZE*i:OUTPUT_SIZE*(i+1), 1].reshape(224, 300)
 
             sns.set()
+            sns.set_style("whitegrid", {'axes.grid' : False})
+            rc = {"axes.spines.left" : False,
+                "axes.spines.right" : False,
+                "axes.spines.bottom" : False,
+                "axes.spines.top" : False,
+                "xtick.bottom" : False,
+                "xtick.labelbottom" : False,
+                "ytick.labelleft" : False,
+                "ytick.left" : False,
+                "axes.grid" : False}
+            plt.rcParams.update(rc)
             
             plot1 = sns.heatmap(ground_to_show_1)
             plot1.figure.savefig("vis/image_" + str(i) + "_ground1.jpg")
@@ -129,6 +142,15 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None):
             
             plot4 = sns.heatmap(pred_to_show_2)
             plot4.figure.savefig("vis/image_" + str(i) + "_pred2.jpg")
+            plt.clf()
+            
+            zeros = np.zeros(ground_to_show_2.shape)
+            ground2show = np.dstack((zeros, ground_to_show_2, zeros))
+            pred2show = np.dstack((zeros, zeros, zeros))
+            im = image2show[i, :, :, :]
+            final = 0.2*ground2show + 0.2*pred2show + 0.6*im
+            plot5 = plt.imshow(final)
+            plot5.figure.savefig("vis/image_" + str(i) + "_combined.jpg")
             plt.clf()
 
     return dice_mean_score
