@@ -69,7 +69,8 @@ def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
         axs[2, i].set_title(title)
 
     # visualize ground truth
-    ground_map, _ = scale_and_reorder_image(ground_img)
+    map = ground_img.cpu().detach().numpy().astype(float)
+    ground_map, _ = scale_and_reorder_image(map)
 
     axs[2, 1].imshow(ground_map[batch_ix, :, :, :])
     axs[2, 1].set_title("Original image")
@@ -177,7 +178,8 @@ class Comprehensive_Atten_Unet(nn.Module):
         up2, att_weight2 = self.up2(up2)
         g_conv1, att1 = self.attentionblock1(conv1, up2)
 
-        visualize_map(att3, att2, att1, inputs)
+        if random.random() <= 0.02: # visualize 2% of time since 100 images created per epoch
+            visualize_map(att3, att2, att1, inputs)
 
         up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
