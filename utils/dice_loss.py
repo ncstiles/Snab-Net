@@ -150,7 +150,7 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
     if mode == "test":
         ground_np = ground.cpu().detach().numpy().astype(int)
         pred_np = pred.cpu().detach().numpy().astype(int)
-        image_np = image.cpu().detach().numpy()
+        image_np = np.copy(image.cpu().detach())
         image2show = np.transpose(image_np, (0, 2, 3, 1))
 
         print("ground np", ground_np.shape)
@@ -180,8 +180,8 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
             img_w_ground = draw_edge(im, ground2show, 1)
             img_combined = draw_edge(img_w_ground, pred2show, 2)
             plot = plt.imshow(img_combined)
-            timestamp = datetime.now().strftime("%m_%d:%H_%M_%S.%f")
-            plot.figure.savefig(f"segmentation/baseline_{timestamp}.png")
+            timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
+            plot.figure.savefig(f"segmentation/ablate_4_{timestamp}.png")
             plt.clf()
 
     return dice_mean_score
@@ -199,3 +199,4 @@ def Intersection_over_Union_isic(prediction, soft_ground_truth, num_class):
     iou_mean_score = torch.mean(iou_score)
 
     return iou_mean_score
+
