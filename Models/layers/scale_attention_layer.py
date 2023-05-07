@@ -125,7 +125,7 @@ class SpatialAtten(nn.Module):
         x_out = self.conv2(x_out)
         spatial_att = F.sigmoid(x_out).unsqueeze(4).permute(0, 1, 4, 2, 3)
         spatial_att = spatial_att.expand(spatial_att.shape[0], 2, 4, spatial_att.shape[3], spatial_att.shape[4]).reshape(
-                                        spatial_att.shape[0],8, spatial_att.shape[3], spatial_att.shape[4])
+                                        spatial_att.shape[0], 8, spatial_att.shape[3], spatial_att.shape[4])
         x_out = residual * spatial_att
 
         x_out += residual
