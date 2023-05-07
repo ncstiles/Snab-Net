@@ -33,61 +33,102 @@ def scale_and_reorder_image(attention_map):
 
     return atten_reshaped, atten_reshaped.shape[3]
 
+def visualize_map(attn_map_3, attn_map_2, attn_map_1, scale_map, ground_img):
+    fig, axs = plt.subplots(5, 2)
 
-def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
-    fig, axs = plt.subplots(3, 2)
 
     # choose random image from batch to visualize
-    smallest_batchsize = min(attn_map_1.shape[0], attn_map_2.shape[0], attn_map_3.shape[0])
-    batch_ix = random.randint(0, smallest_batchsize - 1) # last elt is inclusive
+    smallest_batchsize = min(attn_map_1.shape[0], attn_map_2.shape[0], attn_map_3.shape[0], scale_map.shape[0])
 
-    # visualize attention block 3
-    map = attn_map_3.cpu().detach().numpy().astype(float)
+    for batch_ix in range(smallest_batchsize):
+        # visualize attention block 3
+        map = attn_map_3.cpu().detach().numpy().astype(float)
+        reshaped_map, channels = scale_and_reorder_image(map)
+
+        for i in range(channels):
+            title = f"AB 3 channel {i}"
+            axs[0, i].imshow(reshaped_map[batch_ix, :, :, i])
+            axs[0, i].set_title(title)
+
+        # visualize attention block 2
+        map = attn_map_2.cpu().detach().numpy().astype(float)
+        reshaped_map, channels = scale_and_reorder_image(map)
+
+        for i in range(channels):
+            title = f"AB 2 channel {i}"
+            axs[1, i].imshow(reshaped_map[batch_ix, :, :, i])
+            axs[1, i].set_title(title)
+
+        # visualize attention block 1
+        map = attn_map_1.cpu().detach().numpy().astype(float)
+        reshaped_map, channels = scale_and_reorder_image(map)
+
+        for i in range(channels):
+            title = f"AB 1 channel {i}"
+            axs[2, i].imshow(reshaped_map[batch_ix, :, :, i])
+            axs[2, i].set_title(title)
+
+        # visualize ground truth
+        map = ground_img.cpu().detach().numpy().astype(float)
+        ground_map, _ = scale_and_reorder_image(map)
+
+        axs[2, 1].imshow(ground_map[batch_ix, :, :, :])
+        axs[2, 1].set_title("Original image")
+
+        # # visualize the 4 different channels of scale attention
+        # map = scale_map.cpu().detach().numpy().astype(float)
+        # reshaped_map, channels = scale_and_reorder_image(map)
+
+        # # for i in range(0, channels, 4):
+        # #     title = f"Attention block 0 channel {i // 4}"
+        # axs[3, 0].imshow(reshaped_map[batch_ix, :, :, 0])
+        # axs[3, 1].imshow(reshaped_map[batch_ix, :, :, 4])
+        # axs[4, 0].imshow(reshaped_map[batch_ix, :, :, 8])
+        # axs[4, 1].imshow(reshaped_map[batch_ix, :, :, 12])
+
+
+        plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
+        fig.tight_layout()
+
+
+        # get current time
+        timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
+        plt.savefig(f"attn_out/{timestamp}.png")
+
+def viz_scale(scale_attn, scale_attn_soft):
+    fig, axs = plt.subplots(4, 6)
+
+    # choose random image from batch to visualize
+
+        # visualize attention block 3
+    map = scale_attn.cpu().detach().numpy().astype(float)
     reshaped_map, channels = scale_and_reorder_image(map)
 
-    for i in range(channels):
-        title = f"Attention block 3 channel {i}"
-        axs[0, i].imshow(reshaped_map[batch_ix, :, :, i])
-        axs[0, i].set_title(title)
-
-    # visualize attention block 2
-    map = attn_map_2.cpu().detach().numpy().astype(float)
-    reshaped_map, channels = scale_and_reorder_image(map)
+    map2 = scale_attn_soft.cpu().detach().numpy().astype(float)
+    reshaped_map2, channels = scale_and_reorder_image(map)
 
     for i in range(channels):
-        title = f"Attention block 2 channel {i}"
-        axs[1, i].imshow(reshaped_map[batch_ix, :, :, i])
-        axs[1, i].set_title(title)
+        # title = f"Scale attent {i}"
+        axs[i//4, i%4].imshow(reshaped_map[0, :, :, i])
+        # axs[i//4, i].set_title(title)
 
-    # visualize attention block 1
-    map = attn_map_1.cpu().detach().numpy().astype(float)
-    reshaped_map, channels = scale_and_reorder_image(map)
+    for i in range(8):
+        axs[i//2, 4 + i%2].imshow(reshaped_map[0, :, :, i])
 
-    for i in range(channels):
-        title = f"Attention block 1 channel {i}"
-        axs[2, i].imshow(reshaped_map[batch_ix, :, :, i])
-        axs[2, i].set_title(title)
-
-    # visualize ground truth
-    map = ground_img.cpu().detach().numpy().astype(float)
-    ground_map, _ = scale_and_reorder_image(map)
-
-    axs[2, 1].imshow(ground_map[batch_ix, :, :, :])
-    axs[2, 1].set_title("Original image")
 
     plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
     fig.tight_layout()
 
-    # plt.show()
+    plt.show()
 
-    # get current time
-    timestamp = datetime.now().strftime("%m_%d_%H:%M:%S")
-    plt.savefig(f"attn_out/{timestamp}.png")
+        # # get current time
+        # timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
+        # plt.savefig(f"attn_out/{timestamp}.png")
 
 
 class Comprehensive_Atten_Unet(nn.Module):
     def __init__(self, args, in_ch=3, n_classes=2, feature_scale=4, is_deconv=True, is_batchnorm=True,
-                 nonlocal_mode='concatenation', attention_dsample=(1, 1)):
+                 nonlocal_mode='concatenation', attention_dsample=(1, 1), viz=False):
         super(Comprehensive_Atten_Unet, self).__init__()
         self.args = args
         self.is_deconv = is_deconv
@@ -144,7 +185,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
 
-    def forward(self, inputs):
+    def forward(self, inputs, viz):
 
         # Feature Extraction
         conv1 = self.conv1(inputs)
@@ -178,9 +219,6 @@ class Comprehensive_Atten_Unet(nn.Module):
         up2, att_weight2 = self.up2(up2)
         g_conv1, att1 = self.attentionblock1(conv1, up2)
 
-        if random.random() <= 0.02: # visualize 2% of time since 100 images created per epoch
-            visualize_map(att3, att2, att1, inputs)
-
         up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
 
@@ -190,7 +228,14 @@ class Comprehensive_Atten_Unet(nn.Module):
         dsv2 = self.dsv2(up2)
         dsv1 = self.dsv1(up1)
         dsv_cat = torch.cat([dsv1, dsv2, dsv3, dsv4], dim=1)
-        out = self.scale_att(dsv_cat)
+        out, att0, att0soft = self.scale_att(dsv_cat)
+
+        if viz: 
+            print("visualizing")
+            visualize_map(att3, att2, att1, att0, inputs)
+
+
+
 
         out = self.final(out)
 

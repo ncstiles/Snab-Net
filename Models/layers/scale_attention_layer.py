@@ -3,6 +3,23 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
+
+
+def get_soft_label_scale_v(input_tensor, num_class):
+    """
+        convert a label tensor to soft label
+        input_tensor: tensor with shape [N, C, H, W]
+        output_tensor: shape [N, H, W, num_class]
+    """
+    tensor_list = []
+    input_tensor = input_tensor.permute(0, 2, 3, 1)
+    for i in range(num_class):
+        temp_prob = torch.eq(input_tensor, i * torch.ones_like(input_tensor))
+        tensor_list.append(temp_prob)
+    output_tensor = torch.cat(tensor_list, dim=-1)
+    output_tensor = output_tensor.float()
+    return output_tensor
+
 def conv1x1(in_planes, out_planes, stride=1, bias=False):
     "1x1 convolution"
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride,
@@ -176,17 +193,19 @@ class scale_atten_convblock(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(x)
 
+        scale_atten, scale_atten_soft = None, None
         if not self.cbam is None:
             out, scale_c_atten, scale_s_atten = self.cbam(x)
 
-            # scale_c_atten = nn.Sigmoid()(scale_c_atten)
-            # scale_s_atten = nn.Sigmoid()(scale_s_atten)
-            # scale_atten = channel_atten_c * spatial_atten_s
-
-        # scale_max = torch.argmax(scale_atten, dim=1, keepdim=True)
-        # scale_max_soft = get_soft_label(input_tensor=scale_max, num_class=8)
-        # scale_max_soft = scale_max_soft.permute(0, 3, 1, 2)
-        # scale_atten_soft = scale_atten * scale_max_soft
+            scale_c_atten = nn.Sigmoid()(scale_c_atten)
+            scale_s_atten = nn.Sigmoid()(scale_s_atten)
+            scale_atten = scale_c_atten * scale_s_atten
+            scale_max = torch.argmax(scale_atten, dim=1, keepdim=True)
+            scale_max_soft = get_soft_label_scale_v(input_tensor=scale_max, num_class=8)
+            # scale_max_soft = get_soft_label_scale_v(input_tensor=scale_max, num_class=16)
+            # scale_max_soft = scale_max_soft.permute(0, 3, 1, 2)
+            # scale_atten_soft = scale_atten * scale_max_soft
+            scale_atten_soft = scale_max_soft.permute(0, 3, 1, 2)
 
         out += residual
         out = self.relu(out)
@@ -197,4 +216,4 @@ class scale_atten_convblock(nn.Module):
         if self.dropout:
             out = nn.Dropout2d(0.5)(out)
 
-        return out
+        return out, scale_atten, scale_atten_soft
