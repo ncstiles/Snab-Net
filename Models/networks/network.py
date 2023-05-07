@@ -81,7 +81,7 @@ def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
 
 
         # visualize ground truth
-        map = np.copy(ground_img).astype(float)
+        map = np.copy(ground_img.cpu().detach()).astype(float)
         ground_map, _ = scale_and_reorder_image(map)
 
         axs[plt_ix, 1].imshow(ground_map[batch_ix, :, :, :])
@@ -91,8 +91,8 @@ def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
         fig.tight_layout()
 
         # get current time
-        timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
-        plt.savefig(f"attn_out/{timestamp}.png")
+        timestamp = datetime.now().strftime("%m_%d:%H_%M_%S.%f")
+        plt.savefig(f"attn_out/baseline_{timestamp}.png")
 
 class Comprehensive_Atten_Unet(nn.Module):
     def __init__(self, args, in_ch=3, n_classes=2, feature_scale=4, is_deconv=True, is_batchnorm=True,
