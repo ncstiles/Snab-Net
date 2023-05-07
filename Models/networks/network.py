@@ -87,15 +87,6 @@ class Comprehensive_Atten_Unet(nn.Module):
        
         g_conv1, att1 = self.attentionblock1(conv1, up3)
 
-        atten1_map = att1.cpu().detach().numpy().astype(float)
-        atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, 224 / atten1_map.shape[2],
-                                                             300 / atten1_map.shape[3]], order=0)
-        
-        atten1_map_to_save = atten1_map[0, 0, :, :].reshape(224, 300)
-        rescaled = (255.0 / (atten1_map_to_save.max() - atten1_map_to_save.min()) * (atten1_map_to_save - atten1_map_to_save.min())).astype(np.uint8)
-        img = Image.fromarray(rescaled).convert('RGB')
-        img.save(f'./result/attention_map_{self.counter}.jpg')
-        
         up_3 = upsample(up3)
 
         up1 = self.up_concat1(conv1, up_3)
