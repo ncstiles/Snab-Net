@@ -63,9 +63,6 @@ class Comprehensive_Atten_Unet(nn.Module):
 
     def forward(self, inputs):
         # Feature Extraction
-        img = inputs[0]
-        save_image(img, f'./result/original_img_{self.counter}.jpg')
-        
         conv1 = self.conv1(inputs)
         maxpool1 = self.maxpool1(conv1)
 
