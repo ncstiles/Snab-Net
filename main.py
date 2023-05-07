@@ -10,6 +10,7 @@ import torch.utils.data as Data
 import argparse
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from distutils.version import LooseVersion
 from Datasets.ISIC2018 import ISIC2018_dataset
@@ -40,7 +41,7 @@ def train(train_loader, model, criterion, optimizer, args, epoch):
         image = x.float().cuda()
         target = y.float().cuda()
 
-        output = model(image)                                      # model output
+        output = model(image, viz=False)                                      # model output
 
         target_soft = get_soft_label(target, args.num_classes)     # get soft label
         loss = criterion(output, target_soft, args.num_classes)    # the dice losses
@@ -111,7 +112,7 @@ def valid_isic(valid_loader, model, criterion, optimizer, args, epoch, minloss):
         image = t.float().cuda()
         target = k.float().cuda()
 
-        output = model(image)                                             # model output
+        output = model(image, viz=False)                                             # model output
         output_dis = torch.max(output, 1)[1].unsqueeze(dim=1)
         output_soft = get_soft_label(output_dis, args.num_classes)
         target_soft = get_soft_label(target, args.num_classes)            # get soft label
@@ -241,7 +242,7 @@ def test_isic(test_loader, model, args):
         image = img.float().cuda()
         target = lab.float().cuda()
 
-        output = model(image)                                   # model output
+        output = model(image, viz=True)                                   # model output
         output_dis = torch.max(output, 1)[1].unsqueeze(dim=1)
         output_soft = get_soft_label(output_dis, args.num_classes)
         target_soft = get_soft_label(target, args.num_classes)  # get soft label
@@ -249,7 +250,7 @@ def test_isic(test_loader, model, args):
         label_arr = np.squeeze(target_soft.cpu().numpy()).astype(np.uint8)
         output_arr = np.squeeze(output_soft.cpu().byte().numpy()).astype(np.uint8)
 
-        isic_b_dice = val_dice_isic(output_soft, target_soft, args.num_classes)                # the dice accuracy
+        isic_b_dice = val_dice_isic(output_soft, target_soft, args.num_classes, mode="test", image=image)                # the dice accuracy
         isic_b_iou = Intersection_over_Union_isic(output_soft, target_soft, args.num_classes)  # the iou accuracy
         isic_b_asd = assd(output_arr[:, :, :, 1], label_arr[:, :, :, 1])                       # the assd
 
@@ -428,7 +429,7 @@ if __name__ == '__main__':
                         help='folder to output checkpoints')
 
     # optimization related arguments
-    parser.add_argument('--epochs', type=int, default=300, metavar='N',
+    parser.add_argument('--epochs', type=int, default=1, metavar='N',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--start_epoch', default=0, type=int,
                         help='epoch to start training. useful if continue from a checkpoint')

@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 from torchvision.utils import save_image
 from scipy import ndimage
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 from Models.layers.modules import conv_block, UpCat, UpCatconv, UnetDsv3, UnetGridGatingSignal3
 from Models.layers.grid_attention_layer import GridAttentionBlock2D, MultiAttentionBlock
@@ -11,6 +13,86 @@ from Models.layers.channel_attention_layer import SE_Conv_Block
 from Models.layers.scale_attention_layer import scale_atten_convblock
 from Models.layers.nonlocal_layer import NONLocalBlock2D
 
+
+def scale_and_reorder_image(attention_map):
+    """
+    attention map is in form [batch_size, num_channels, height, width]
+    reshape to [batch_size, height, width, num_channels]
+    make the image (224, 300)
+    """
+    batch_scale, channel_scale = 1.0, 1.0
+    desired_height, desired_width = 224, 300
+
+    batch_size, num_channels, height, width = attention_map.shape
+    height_scale, width_scale = desired_height / height, desired_width / width
+
+    zoomed_map = ndimage.interpolation.zoom(attention_map, [batch_scale, channel_scale, height_scale, width_scale], order=0)
+
+    atten_reshaped = np.transpose(zoomed_map, (0,2,3,1))
+
+    return atten_reshaped, atten_reshaped.shape[3]
+
+
+def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
+    num_maps = 0
+    num_maps = num_maps + 1 if attn_map_3 != None else num_maps
+    num_maps = num_maps + 1 if attn_map_2 != None else num_maps
+    num_maps = num_maps + 1 if attn_map_1 != None else num_maps
+    fig, axs = plt.subplots(num_maps, 2)
+
+    # choose random image from batch to visualize
+    smallest_batchsize = min(attn_map_1.shape[0], attn_map_2.shape[0], attn_map_3.shape[0])
+
+    for batch_ix in range(smallest_batchsize):
+        plt_ix = 0
+        if attn_map_3 != None:
+        # visualize attention block 3
+            map = attn_map_3.cpu().detach().numpy().astype(float)
+            reshaped_map, channels = scale_and_reorder_image(map)
+
+            for i in range(channels):
+                title = f"AB 3 channel {i}"
+                axs[plt_ix, i].imshow(reshaped_map[batch_ix, :, :, i])
+                axs[plt_ix, i].set_title(title)
+            
+            plt_ix += 1
+
+        if attn_map_2 != None:
+            # visualize attention block 2
+            map = attn_map_2.cpu().detach().numpy().astype(float)
+            reshaped_map, channels = scale_and_reorder_image(map)
+
+            for i in range(channels):
+                title = f"AB 2 channel {i}"
+                axs[plt_ix, i].imshow(reshaped_map[batch_ix, :, :, i])
+                axs[plt_ix, i].set_title(title)
+            
+            plt_ix += 1
+
+        if attn_map_1 != None:
+            # vizsualize attention block 1
+            map = attn_map_1.cpu().detach().numpy().astype(float)
+            reshaped_map, channels = scale_and_reorder_image(map)
+
+            for i in range(channels):
+                title = f"AB 1 channel {i}"
+                axs[plt_ix, i].imshow(reshaped_map[batch_ix, :, :, i])
+                axs[plt_ix , i].set_title(title)
+
+
+        # visualize ground truth
+        map = np.copy(ground_img).astype(float)
+        ground_map, _ = scale_and_reorder_image(map)
+
+        axs[plt_ix, 1].imshow(ground_map[batch_ix, :, :, :])
+        axs[plt_ix, 1].set_title("Original image")
+
+        plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
+        fig.tight_layout()
+
+        # get current time
+        timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
+        plt.savefig(f"attn_out/{timestamp}.png")
 
 class Comprehensive_Atten_Unet(nn.Module):
     def __init__(self, args, in_ch=3, n_classes=2, feature_scale=4, is_deconv=True, is_batchnorm=True,
@@ -72,7 +154,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
 
-    def forward(self, inputs):
+    def forward(self, inputs, viz):
         # Feature Extraction
         conv1 = self.conv1(inputs)
         maxpool1 = self.maxpool1(conv1)
@@ -97,17 +179,9 @@ class Comprehensive_Atten_Unet(nn.Module):
         up4, att_weight4 = self.up4(g_conv4)
         g_conv3, att3 = self.attentionblock3(conv3, up4)
 
-        # atten3_map = att3.cpu().detach().numpy().astype(np.float)
-        # atten3_map = ndimage.interpolation.zoom(atten3_map, [1.0, 1.0, 224 / atten3_map.shape[2],
-        #                                                      300 / atten3_map.shape[3]], order=0)
-
         up3 = self.up_concat3(g_conv3, up4)
         up3, att_weight3 = self.up3(up3)
         g_conv2, att2 = self.attentionblock2(conv2, up3)
-
-        # atten2_map = att2.cpu().detach().numpy().astype(float)
-        # atten2_map = ndimage.interpolation.zoom(atten2_map, [1.0, 1.0, 224 / atten2_map.shape[2],
-        #                                                       300 / atten2_map.shape[3]], order=0)
 
         up2 = self.up_concat2(g_conv2, up3)
         up2, att_weight2 = self.up2(up2)
@@ -115,6 +189,10 @@ class Comprehensive_Atten_Unet(nn.Module):
 
         up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
+
+        if viz: 
+            print("visualizing")
+            visualize_map(att3, att2, att1, inputs)
 
         # Deep Supervision
         dsv4 = self.dsv4(up4)
