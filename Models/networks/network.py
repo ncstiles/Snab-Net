@@ -41,7 +41,7 @@ def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
     fig, axs = plt.subplots(num_maps, 2)
 
     # choose random image from batch to visualize
-    smallest_batchsize = min(attn_map_1.shape[0], attn_map_2.shape[0], attn_map_3.shape[0])
+    smallest_batchsize = min(attn_map.shape[0] for attn_map in [attn_map_3, attn_map_2, attn_map_1] if attn_map != None)
 
     for batch_ix in range(smallest_batchsize):
         plt_ix = 0

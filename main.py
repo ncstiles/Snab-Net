@@ -312,17 +312,17 @@ def main(args):
         # model = torch.nn.DataParallel(model, device_ids=list(range(torch.cuda.device_count())))
 
     # collect the number of parameters in the network
-    print("------------------------------------------")
-    print("Network Architecture of Model AttU_Net:")
+    # print("------------------------------------------")
+    # print("Network Architecture of Model AttU_Net:")
     num_para = 0
     for name, param in model.named_parameters():
         num_mul = 1
         for x in param.size():
             num_mul *= x
         num_para += num_mul
-    print(model)
-    print("Number of trainable parameters {0} in Model {1}".format(num_para, args.id))
-    print("------------------------------------------")
+    # print(model)
+    # print("Number of trainable parameters {0} in Model {1}".format(num_para, args.id))
+    # print("------------------------------------------")
 
     # Define optimizers and loss function
     optimizer = torch.optim.Adam(model.parameters(),
