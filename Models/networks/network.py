@@ -150,7 +150,7 @@ class Comprehensive_Atten_Unet(nn.Module):
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
 
-    def forward(self, inputs):
+    def forward(self, inputs, viz):
         # Feature Extraction
         conv1 = self.conv1(inputs)
         maxpool1 = self.maxpool1(conv1)
