@@ -101,7 +101,7 @@ def visualize_map(attn_map_3, attn_map_2, attn_map_1, ground_img):
 
         # get current time
         timestamp = datetime.now().strftime("%m_%d:%H_%M_%S.%f")
-        plt.savefig(f"attn_out/ablate_24_{timestamp}.png")
+        plt.savefig(f"attn_out/ablate_34_{timestamp}.png")
 
 class Comprehensive_Atten_Unet(nn.Module):
     def __init__(self, args, in_ch=3, n_classes=2, feature_scale=4, is_deconv=True, is_batchnorm=True,
@@ -121,77 +121,75 @@ class Comprehensive_Atten_Unet(nn.Module):
 
         # downsampling
         self.conv1 = conv_block(self.in_channels, filters[0])
-        self.maxpool1 = nn.MaxPool2d(kernel_size=(4, 4))
+        self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2))
 
-        self.conv3 = conv_block(filters[0], filters[2], drop_out=True)
-        self.maxpool3 = nn.MaxPool2d(kernel_size=(4, 4))
+        self.conv2 = conv_block(filters[0], filters[1], drop_out=True)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=(8, 8))
 
-        self.center = conv_block(filters[2], filters[4], drop_out=True)
+        self.center = conv_block(filters[1], filters[4], drop_out=True)
 
         # attention blocks
-        self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[2],
+        self.attentionblock1 = GridAttentionBlock2D(in_channels=filters[0], gating_channels=filters[1],
                                                     inter_channels=filters[0])
-
-        self.attentionblock3 = MultiAttentionBlock(in_size=filters[2], gate_size=filters[4], inter_size=filters[2],
+        self.attentionblock2 = MultiAttentionBlock(in_size=filters[1], gate_size=filters[4], inter_size=filters[1],
                                                    nonlocal_mode=nonlocal_mode, sub_sample_factor=attention_dsample)
+        
 
         # upsampling
-        self.up_concat3 = UpCat(filters[4], filters[2], self.is_deconv)
-        self.up_concat1 = UpCat(filters[2], filters[0], self.is_deconv)
-        
-        self.up3 = SE_Conv_Block(filters[3], filters[2], drop_out=True)
+        self.up_concat2 = UpCat(filters[4], filters[1], self.is_deconv)
+        self.up_concat1 = UpCat(filters[1], filters[0], self.is_deconv)
+
+        self.up2 = SE_Conv_Block(filters[2], filters[1])
         self.up1 = SE_Conv_Block(filters[1], filters[0])
 
         # deep supervision
-        self.dsv3 = UnetDsv3(in_size=filters[2], out_size=4, scale_factor=self.out_size)
+        self.dsv2 = UnetDsv3(in_size=filters[1], out_size=4, scale_factor=self.out_size)
         self.dsv1 = nn.Conv2d(in_channels=filters[0], out_channels=4, kernel_size=1)
 
         self.scale_att = scale_atten_convblock(in_size=8, out_size=4)
-        
         # final conv (without any concat)
         self.final = nn.Sequential(nn.Conv2d(4, n_classes, kernel_size=1), nn.Softmax2d())
-
 
     def forward(self, inputs, viz):
         # Feature Extraction
         conv1 = self.conv1(inputs)
         maxpool1 = self.maxpool1(conv1)
 
-        conv3 = self.conv3(maxpool1)
-        maxpool3 = self.maxpool3(conv3)
+        conv2 = self.conv2(maxpool1)
+        maxpool2 = self.maxpool2(conv2)
 
         # Gating Signal Generation
-        center = self.center(maxpool3)
+        center = self.center(maxpool2)
 
         # Attention Mechanism
         # Upscaling Part (Decoder)
-        g_conv3, att3 = self.attentionblock3(conv3, center)
 
-        upsample = nn.Upsample(scale_factor=2, mode="bilinear")
+        g_conv2, att2 = self.attentionblock2(conv2, center)
+
+        upsample = nn.Upsample(scale_factor=4, mode="bilinear")
         up_center = upsample(center)
+        up2 = self.up_concat2(g_conv2, up_center)
+        up2, att_weight2 = self.up2(up2)
+        g_conv1, att1 = self.attentionblock1(conv1, up2)
 
-        up3 = self.up_concat3(g_conv3, up_center)
-        up3, att_weight3 = self.up3(up3)
-       
-        g_conv1, att1 = self.attentionblock1(conv1, up3)
-
-        up_3 = upsample(up3)
-
-        up1 = self.up_concat1(conv1, up_3)
-        
+        up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
 
+        if viz: 
+            print("visualizing")
+            visualize_map(None, att2, att1, inputs)
+
         # Deep Supervision
-        dsv3 = self.dsv3(up3)
+        dsv2 = self.dsv2(up2)
         dsv1 = self.dsv1(up1)
-        dsv_cat = torch.cat([dsv1, dsv3], dim=1)
+        
+        dsv_cat = torch.cat([dsv1, dsv2], dim=1)
+
         out = self.scale_att(dsv_cat)
+
         out = self.final(out)
         
         self.counter += 1
 
-        if viz: 
-            print("visualizing")
-            visualize_map(att3, None, att1, inputs)
 
         return out
