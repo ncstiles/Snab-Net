@@ -181,7 +181,7 @@ def val_dice_isic(prediction, soft_ground_truth, num_class, mode=None, image=Non
             img_combined = draw_edge(img_w_ground, pred2show, 2)
             plot = plt.imshow(img_combined)
             timestamp = datetime.now().strftime("%m_%d_%H:%M:%S.%f")
-            plot.figure.savefig(f"segmentation/ablate_1_{timestamp}.png")
+            plot.figure.savefig(f"segmentation/ablate_12_{timestamp}.png")
             plt.clf()
 
     return dice_mean_score
