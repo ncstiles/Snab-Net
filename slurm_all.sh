@@ -51,76 +51,78 @@ python -m visdom.server &
 echo " Run of baseline started at:- "
 date
 git checkout master_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv1 started at:- "
 date
 git checkout ablate_conv1_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv2 started at:- "
 date
 git checkout ablate_conv2_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv3 started at:- "
 date
 git checkout ablate_conv3_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv4 started at:- "
 date
 git checkout ablate_conv4_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv12 started at:- "
 date
 git checkout ablate_conv12_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv13 started at:- "
 date
 git checkout ablate_conv13_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv14 started at:- "
 date
 git checkout ablate_conv14_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv23 started at:- "
 date
 git checkout ablate_conv23_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv24 started at:- "
 date
 git checkout ablate_conv24_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
 
 echo " Run of ablating conv34 started at:- "
 date
 git checkout ablate_conv34_viz
-python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet 
+python main.py --data ISIC2018 --val_folder folder1 --id Comp_Atten_Unet --epochs 100
 echo "Run completed at:- "
 date
+
+
